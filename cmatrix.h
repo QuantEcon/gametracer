@@ -21,6 +21,17 @@
 #define _CMATRIX_H_
 
 #include <math.h>
+
+// For modern C++ compatibility
+#include <cmath>
+#include <cstring>
+#ifndef finite
+#  define finite(x) std::isfinite(x)
+#endif
+#ifndef bcmp
+#  define bcmp(a,b,n) std::memcmp((a),(b),(n))
+#endif
+
 #ifdef SOLARIS
 #include <ieeefp.h>
 #endif
@@ -28,7 +39,6 @@
 #include <fstream>
 #include <stdlib.h>
 #include <assert.h>
-#include <strings.h>
 #include <string>
 #include <iomanip>
 
