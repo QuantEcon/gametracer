@@ -178,7 +178,8 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
 
     ym1 = z;
     ym1 -= sh;
-    l = (ym1 * u) / u.norm2(); // dot product
+    double unorm2 = u.norm2();
+    l = (unorm2 > 0.0) ? (ym1 * u) / unorm2 : 1.0; // dot product with guard for u==0
     if(l <= 0.0 || B) {
       zh = u;
       zh *= l;
@@ -210,7 +211,7 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
       // Rule of false position
       if(B && d.absmax() > fuzz) {
 	for(i = 0; i < M; i++) {
-	  ym1[i] = (yh[i] * z[i] - zh[i] * y[i])/d[i];
+	  if(fabs(d[i]) > fuzz) ym1[i] = (yh[i] * z[i] - zh[i] * y[i])/d[i];
 	}
       } else {
       // Only do a first-order approximation
