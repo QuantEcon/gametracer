@@ -81,6 +81,8 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
 
   A.retract(sh, zh);
   so = sh;
+  sho = sh;
+  yh = zh;
 
   while(1) {
     A.payoffMatrix(DG,sh,0.0);
