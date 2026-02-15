@@ -188,6 +188,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
   // this outer while loop executes once for each support boundary
   // that the path crosses.
   while(1) {
+    minBound = BIGFLOAT;
     k = 0; // iteration counter; when k reaches LNMFreq, run LNM
      // within a single boundary, support unchanged
 
@@ -360,6 +361,8 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
     } // end of for loop
 
     // now we've reached a support boundary
+
+    if(!(minBound < BIGFLOAT)) return numEq;
 
     // if a player's current best response is leaving the
     // support, we must find a new one for that player
