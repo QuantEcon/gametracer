@@ -139,6 +139,10 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
     yn1[n] = v[s[n]];
     for(i = A.firstAction(n); i < A.lastAction(n); i++) {
       if(!B[i]) {
+        if(G[n] == g[i]) {
+          if(v[i] > yn1[n]) return numEq; // degenerate perturbation
+          continue;
+        }
         newV = (v[i]-yn1[n]) / (G[n]-g[i]);
         if(newV > V) 
           V = newV;
@@ -258,6 +262,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
       // test whether lambda will become 0 in the course of this
       // step, which means there's an equilibrium there
       if(Index*(lambda+dlambda*delta) <= 0.0) {
+        if (dlambda == 0.0) return numEq;
 	// if there's no next support boundary, treat the equilibrium
 	// as the next support boundary and step up to it incrementally
 	if(minBound == BIGFLOAT && N > 2 && stepsLeft > 1) { 
@@ -335,6 +340,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
       }
       if(ee > threshold) { // if we've accumulated too much error, either
 	if(wobble) {       // wobble or quit.
+	  if(lambda == 0.0) return numEq;
 	  DG.multiply(sigma, ym1);
 	  ym1 /= (double)(N-1);
 	  g = z;
@@ -376,7 +382,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
     // z = (z-x)+sigma;
      
     // wobble the perturbation cvector to put us back on an equilibrium
-    if(N > 2 && wobble) {
+    if(N > 2 && wobble && lambda != 0.0) {
       A.payoffMatrix(DG, sigma, fuzz);
       DG.multiply(sigma, ym1);
       ym1 /= (double)(N-1);
