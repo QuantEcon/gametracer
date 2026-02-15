@@ -358,8 +358,8 @@ void cmatrix::svd(cmatrix &u, cmatrix &v, double *w) {
 				g = c*g;
 				z = pythag(f,h);
 				rv1[j] = z;
-				c = f/z;
-				s = h/z;
+				c = 1.0; s = 0.0;
+				if (z) { c = f/z; s = h/z; }
 				f = x*c+g*s;
 				g = g*c-x*s;
 				h = y*s;
