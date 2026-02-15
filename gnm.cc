@@ -394,4 +394,5 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 
     }
   }
+  return numEq;
 }
