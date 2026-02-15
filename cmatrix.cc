@@ -302,6 +302,7 @@ void cmatrix::svd(cmatrix &u, cmatrix &v, double *w) {
 					flag = 0;
 					break;
 				}
+				if (nm < 0) { flag = 0; break; }
 				if ((double)(fabs(w[nm])+anorm)==anorm) break;
 			}
 			if (flag) {
