@@ -57,9 +57,11 @@ static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
     return true;
 }
 
-static void cleanup_eq(cvector** Eq, int numEq) {
+// GNM keeps the equilibrium array NULL-terminated at all times, so the
+// cleanup does not need a count; this matters when GNM throws.
+static void cleanup_eq(cvector** Eq) {
     if (!Eq) return;
-    for (int k = 0; k < numEq; ++k) {
+    for (int k = 0; Eq[k] != nullptr; ++k) {
         delete Eq[k];
     }
     std::free(Eq);
@@ -144,8 +146,8 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
     if (!compute_sizes(num_players, actions, sz))
         return -1;
 
-    cvector** Eq = nullptr;
-    int found = 0;          // hoisted for exception-safe cleanup
+    cvector** Eq = nullptr; // hoisted for exception-safe cleanup
+    int found = 0;
     double* buf = nullptr;  // in case we allocate and then throw
 
     try {
@@ -164,13 +166,13 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         found = GNM(A, gvec, Eq, steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold);
 
         if (found == 0) {
-            cleanup_eq(Eq, 0);
+            cleanup_eq(Eq);
             *answers = nullptr;
             return 0;
         }
         if (found < 0) {
             // Upstream should not return <0, but treat it as internal error if it happens.
-            cleanup_eq(Eq, 0);
+            cleanup_eq(Eq);
             *answers = nullptr;
             return -3;
         }
@@ -179,7 +181,7 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         size_t total = static_cast<size_t>(found) * static_cast<size_t>(sz.M);
         buf = static_cast<double*>(std::malloc(total * sizeof(double)));
         if (!buf) {
-            cleanup_eq(Eq, found);
+            cleanup_eq(Eq);
             Eq = nullptr;
             return -2;
         }
@@ -190,7 +192,7 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
                         static_cast<size_t>(sz.M) * sizeof(double));
         }
 
-        cleanup_eq(Eq, found);
+        cleanup_eq(Eq);
         Eq = nullptr;
 
         *answers = buf;
@@ -199,12 +201,12 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
 
     } catch (const std::bad_alloc&) {
         if (buf) std::free(buf);
-        cleanup_eq(Eq, (found > 0) ? found : 0);
+        cleanup_eq(Eq);
         *answers = nullptr;
         return -2;
     } catch (...) {
         if (buf) std::free(buf);
-        cleanup_eq(Eq, (found > 0) ? found : 0);
+        cleanup_eq(Eq);
         *answers = nullptr;
         return -3;
     }

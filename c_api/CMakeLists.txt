@@ -77,11 +77,22 @@ if(GAMETRACER_BUILD_TESTS)
     # shared library, so the sources are compiled in)
     add_executable(test_core
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/gametracer_c_api.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../cmatrix.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gnm.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/../gnmgame.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ipa.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/../nfgame.cc
     )
-    target_include_directories(test_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+    target_include_directories(test_core PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+    # The shim is compiled into the test executable, not imported from the DLL
+    target_compile_definitions(test_core PRIVATE GAMETRACER_BUILDING_DLL=1)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(test_core PRIVATE m)
+    endif()
     add_test(NAME test_core COMMAND test_core)
 
     # On Windows the test executable must find libgametracer.dll
