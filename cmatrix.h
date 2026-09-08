@@ -55,33 +55,27 @@ public:
 class cvector {
 friend class cmatrix;
 public:
- static int num_vec_cons; 
 	inline cvector() {
-	  cvector::num_vec_cons++;
 		m = 1;
 		x = new double[1];
 	}
 	inline cvector(int m) {
-	  cvector::num_vec_cons++;
 		this->m = m;
 		x = new double[m];
 	}
 	~cvector(); 
 	inline cvector(const cvector &v) {
-	  cvector::num_vec_cons++;
 		m = v.m;
 		x = new double[m];
 		//for(int i=0;i<m;i++) x[i] = v.x[i];
 		memcpy(x,v.x,m*sizeof(double));
 	}
 	inline cvector(int m, const double &a) {
-	  cvector::num_vec_cons++;
 		this->m = m;
 		x = new double[m];
 		for(int i=0;i<m;i++) x[i] = a;
 	}
 	inline cvector(double *v, int m, bool keep=false) {
-	  cvector::num_vec_cons++;
 		this->m = m;
 		if (keep) x = v;
 		else {
