@@ -210,6 +210,7 @@ void gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
 	  }
 	}
       }
+      if(pr < 0) break; // no admissible pivot row (ray termination)
       p = Pivot(T, pr, pc, row, col, D);
     } while(p != cg+1);
   }
