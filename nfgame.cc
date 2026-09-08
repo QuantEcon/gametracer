@@ -19,6 +19,7 @@
 
 #include "cmatrix.h"
 #include "nfgame.h"
+#include <vector>
 
 nfgame::nfgame(int numPlayers, int *actions, const cvector &payoffs) : gnmgame(numPlayers, actions), payoffs(payoffs) {
   blockSize = new int[numPlayers + 1];
@@ -40,7 +41,10 @@ int nfgame::findIndex(int player, int *s) {
 }
 
 double nfgame::getMixedPayoff(int player, cvector &s) {
-  double m[blockSize[numPlayers]];
+  // heap-allocated: blockSize[numPlayers] is the number of pure profiles,
+  // which can exceed the stack size
+  std::vector<double> mbuf(blockSize[numPlayers]);
+  double *m = mbuf.data();
   memcpy(m, payoffs.values() + player * blockSize[numPlayers], blockSize[numPlayers]*sizeof(double));
   return localPayoff(s, m, numPlayers);
 }
@@ -48,8 +52,13 @@ double nfgame::getMixedPayoff(int player, cvector &s) {
 void nfgame::payoffMatrix(cmatrix &dest, cvector &s, double fuzz) {
   int rown, coln, rowi, coli;
   double fuzzcount;
-  double m[blockSize[numPlayers]];
-  double local[maxActions*maxActions];
+  // heap-allocated: blockSize[numPlayers] is the number of pure profiles,
+  // which can exceed the stack size
+  std::vector<double> mbuf(blockSize[numPlayers]);
+  double *m = mbuf.data();
+  // heap-allocated as well: maxActions*maxActions doubles
+  std::vector<double> localbuf(maxActions*maxActions);
+  double *local = localbuf.data();
   for(rown = 0; rown < numPlayers; rown++) {
     for(coln = 0; coln < numPlayers; coln++) {
       if(rown == coln) {
