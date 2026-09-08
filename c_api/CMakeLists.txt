@@ -61,3 +61,32 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/gametracer_c_api.h
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../COPYING
     DESTINATION share/licenses/gametracer
 )
+
+# Tests (off by default so that packaging builds are unaffected)
+option(GAMETRACER_BUILD_TESTS "Build the GameTracer C API tests" OFF)
+if(GAMETRACER_BUILD_TESTS)
+    enable_testing()
+
+    # Exercises the C ABI through the shared library
+    add_executable(test_c_api ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_c_api.cpp)
+    target_include_directories(test_c_api PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(test_c_api PRIVATE gametracer)
+    add_test(NAME test_c_api COMMAND test_c_api)
+
+    # Calls the C++ core directly (its symbols are not exported from the
+    # shared library, so the sources are compiled in)
+    add_executable(test_core
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../cmatrix.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gnmgame.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../nfgame.cc
+    )
+    target_include_directories(test_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+    add_test(NAME test_core COMMAND test_core)
+
+    # On Windows the test executable must find libgametracer.dll
+    if(WIN32)
+        set_tests_properties(test_c_api PROPERTIES
+            ENVIRONMENT "PATH=$<TARGET_FILE_DIR:gametracer>;$ENV{PATH}")
+    endif()
+endif()
