@@ -47,8 +47,10 @@ static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
     // require every such product to fit in int: 46340^2 <= INT_MAX.
     if (M + static_cast<size_t>(num_players) + 2 > 46340) return false;
 
+    // Check before multiplying: on a 32-bit size_t the product can wrap
+    // (num_players >= 2 was checked above, so the division is safe)
+    if (P > static_cast<size_t>(INT_MAX) / static_cast<size_t>(num_players)) return false;
     size_t payoff_len = static_cast<size_t>(num_players) * P;
-    if (payoff_len > static_cast<size_t>(INT_MAX)) return false;
 
     out.N = num_players;
     out.M = static_cast<int>(M);

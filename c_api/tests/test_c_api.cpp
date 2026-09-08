@@ -278,6 +278,16 @@ void test_invalid_arguments() {
         CHECK(answers == NULL);
     }
 
+    // N*P = 32 * 2^27 = 2^32 exceeds INT_MAX; on a 32-bit size_t the
+    // product wraps to 0, so it must be checked before multiplying
+    {
+        int many_actions[32];
+        for (int p = 0; p < 32; ++p) many_actions[p] = (p < 27) ? 2 : 1;
+        CHECK(ipa(32, many_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
+        CHECK(gnm(32, many_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(answers == NULL);
+    }
+
     // gametracer_free is safe on NULL
     gametracer_free(NULL);
 }
