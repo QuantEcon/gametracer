@@ -20,6 +20,7 @@
 #include "cmatrix.h"
 #include "gnm.h"
 #include "gnmgame.h"
+#include <new>
 
 // gnm(A,g,Eq,steps,fuzz,LNMFreq,LNMMax,LambdaMin,wobble,threshold)
 // ----------------------------------------------------------------
@@ -104,7 +105,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 
   // INITIALIZATION
   Eq = (cvector **)malloc(sizeof(cvector *));
-  if(Eq == NULL) return numEq;
+  if(Eq == NULL) throw std::bad_alloc();
 
   // Find the lone equilibrium of the perturbed game
   for(n = 0; n < N; n++) {
@@ -294,7 +295,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 	  if(ee < fuzz) { // only save high quality equilibria;
 	    // this restriction could be removed.
 	    cvector **newEq = (cvector **)realloc(Eq, (numEq+2)*sizeof(cvector *));
-	    if(newEq == NULL) return numEq; // keep the equilibria found so far
+	    if(newEq == NULL) throw std::bad_alloc(); // as new cvector below
 	    Eq = newEq;
 	    Eq[numEq] = new cvector(M);
 	    *(Eq[numEq++]) = sigma;
