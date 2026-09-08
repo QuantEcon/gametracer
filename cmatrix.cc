@@ -20,13 +20,13 @@
 #include "cmatrix.h"
 #include "math.h"
 #include "float.h"
+#include <vector>
 cvector::~cvector() { delete []x; }
 // adopted from NRiC, pg 45
 
 cmatrix::~cmatrix()
  { delete []x; }
 
-int cvector::num_vec_cons = 0;
 cmatrix cmatrix::inv(bool &worked) const {
 	if (m!=n) {
 		cerr << "invalid cmatrix inverse" << endl;
@@ -401,10 +401,14 @@ double cmatrix::adjoint() {
   int r2[m];
   int c[m];
   double D = 1.0;
-  double retval[m][m];
+  // heap-allocated m-by-m work matrix (row-major); m*m doubles can exceed
+  // the stack size
+  std::vector<double> retvalbuf(static_cast<size_t>(m) * m);
+  double *retval = retvalbuf.data();
+#define RETVAL(i,j) retval[(i)*m+(j)]
   for(i = 0; i < m; i++)
     for(j = 0; j < m; j++)
-      retval[i][j] = x[i*n+j];
+      RETVAL(i,j) = x[i*n+j];
 
   for(i= 0; i < m; i++) {
     r[i] = -1;
@@ -415,8 +419,8 @@ double cmatrix::adjoint() {
     max = -1.0;
     maxi = -1;
     for(i = 0; i < m; i++) {
-      if(r[i] < 0 && fabs(retval[i][j]) > max) {
-	max = fabs(retval[i][j]);
+      if(r[i] < 0 && fabs(RETVAL(i,j)) > max) {
+	max = fabs(RETVAL(i,j));
 	maxi = i;
       }
     }
@@ -428,27 +432,26 @@ double cmatrix::adjoint() {
 	continue;
     }
     if(maxi == -1) {
-      cout << "oops";
       return DBL_MAX;
     }
 
     i = maxi;
-    pivot = retval[i][j];
+    pivot = RETVAL(i,j);
     for(i0 = 0; i0 < m; i0++) {
       if(i0 != i) {
 	for(j0 = 0; j0 < m; j0++) {
 	  if(j0 != j) {
-	    retval[i0][j0] *= pivot;
-	    retval[i0][j0] -= retval[i0][j] * retval[i][j0];
-	    retval[i0][j0] /= D;
+	    RETVAL(i0,j0) *= pivot;
+	    RETVAL(i0,j0) -= RETVAL(i0,j) * RETVAL(i,j0);
+	    RETVAL(i0,j0) /= D;
 	  }
 	}
       }
     }
     for(i0 = 0; i0 < m; i0++) {
-      retval[i0][j] = -retval[i0][j];
+      RETVAL(i0,j) = -RETVAL(i0,j);
     }
-    retval[i][j] = D;
+    RETVAL(i,j) = D;
     D = pivot;
     r[i] = j;
     c[j] = i;
@@ -472,12 +475,13 @@ double cmatrix::adjoint() {
   }
   for(i = 0; i < m; i++)
     for(j = 0; j < m; j++)
-      x[i*n+j] = retval[c[i]][r[j]];
+      x[i*n+j] = RETVAL(c[i],r[j]);
   if(s%2 == 1) {
     negate();
     D = -D;
   }
   // cout << *this << endl << endl;
+#undef RETVAL
   return D;
 }
 

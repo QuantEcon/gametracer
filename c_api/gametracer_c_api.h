@@ -49,7 +49,9 @@ Return value:
 - >0: success (passes through upstream IPA return)
 - 0 : failure/no equilibrium found (upstream convention)
 - <0: shim-detected error:
-    -1 invalid args / size overflow
+    -1 invalid args (null pointer, num_players < 2, actions[p] <= 0) / size overflow
+       (including M + num_players + 2 > 46340, the largest size whose
+       square fits in int, as required by the core matrix code)
     -2 allocation failure
     -3 exception/internal
 */
@@ -74,7 +76,9 @@ gnm:
 Return value:
 - >=0: number of equilibria found
 - <0 : shim-detected error:
-    -1 invalid args / size overflow
+    -1 invalid args (null pointer, num_players < 2, actions[p] <= 0) / size overflow
+       (including M + num_players + 2 > 46340, the largest size whose
+       square fits in int, as required by the core matrix code)
     -2 allocation failure
     -3 exception/internal
 Caller must free *answers with gametracer_free (safe on NULL).

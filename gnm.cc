@@ -20,13 +20,16 @@
 #include "cmatrix.h"
 #include "gnm.h"
 #include "gnmgame.h"
+#include <new>
 
 // gnm(A,g,Eq,steps,fuzz,LNMFreq,LNMMax,LambdaMin,wobble,threshold)
 // ----------------------------------------------------------------
 // This executes the GNM algorithm on game A.
 // Interpretation of parameters:
 // g: perturbation ray.
-// Eq: an array of equilibria will be stored here
+// Eq: an array of equilibria will be stored here.  The array is kept
+//     NULL-terminated (Eq[numEq] == NULL) at all times, so that a caller
+//     can clean it up even if an exception escapes from this function.
 // steps: number of steps to take within a support cell; higher 
 //        values of this parameter slow GNM down, but may help it
 //        avoid getting off the path.
@@ -104,6 +107,8 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 
   // INITIALIZATION
   Eq = (cvector **)malloc(sizeof(cvector *));
+  if(Eq == NULL) throw std::bad_alloc();
+  Eq[0] = NULL;
 
   // Find the lone equilibrium of the perturbed game
   for(n = 0; n < N; n++) {
@@ -292,7 +297,10 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 	  }
 	  if(ee < fuzz) { // only save high quality equilibria;
 	    // this restriction could be removed.
-	    Eq = (cvector **)realloc(Eq, (numEq+2)*sizeof(cvector *));	
+	    cvector **newEq = (cvector **)realloc(Eq, (numEq+2)*sizeof(cvector *));
+	    if(newEq == NULL) throw std::bad_alloc(); // as new cvector below
+	    Eq = newEq;
+	    Eq[numEq+1] = NULL; // Eq[numEq] is still NULL if new throws
 	    Eq[numEq] = new cvector(M);
 	    *(Eq[numEq++]) = sigma;
 	  }

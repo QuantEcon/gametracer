@@ -137,7 +137,8 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
     }
     
     // find equilibrium assuming current support
-    T2.solve(ymn1, ymn2);
+    if(!T2.solve(ymn1, ymn2))
+      return 0; // singular system; give up
     
     for(i = 0; i < M; i++)
       s[i] = ymn2[i];
@@ -150,7 +151,8 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
       }
     }
     if(flag) { // update support and solve
-      A.LemkeHowson(s,T,Im);
+      if(!A.LemkeHowson(s,T,Im))
+	return 0; // ray termination; give up
     } else {
       // limit to current support
       for(i = 0; i < M; i++) {

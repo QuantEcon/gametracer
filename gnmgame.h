@@ -74,7 +74,9 @@ class gnmgame {
   // This normalizes a strategy profile by scaling appropriately.
   void normalizeStrategy(cvector &s);
 
-  void LemkeHowson(cvector &dest, cmatrix &T, int *Im);
+  // Returns 1 on normal termination, 0 on ray termination (no admissible
+  // pivot row), in which case dest is not a solution.
+  int LemkeHowson(cvector &dest, cmatrix &T, int *Im);
 
 
   inline int getNumPlayers() { return numPlayers; }

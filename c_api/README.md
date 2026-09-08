@@ -42,6 +42,23 @@ Install layout:
   - Windows: `/tmp/gametracer_install/bin/libgametracer.dll`
 - License: `/tmp/gametracer_install/share/licenses/gametracer/COPYING`
 
+## Tests
+
+The tests are not built by default. To build and run them from the
+**repository root**:
+
+```sh
+cmake -S c_api -B build -DGAMETRACER_BUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+- `tests/test_c_api.cpp` exercises `ipa`, `gnm`, and `gametracer_free`
+  through the shared library on small games with known equilibria, and
+  checks the argument validation.
+- `tests/test_core.cpp` calls the C++ core directly for regressions that
+  are not reachable through the ABI in reasonable time (e.g. large games).
+
 ## Example use in Julia with `ccall`
 
 ```julia
@@ -178,6 +195,6 @@ Interpret the return value as follows.
 
 | Code | Meaning |
 |---:|---|
-| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `actions[p] <= 0`, overflow of `M`, `P`, or `N*P`. |
+| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `num_players < 2`, `actions[p] <= 0`, overflow of `M`, `P`, or `N*P`, or `M + N + 2 > 46340` (the core stores matrix dimensions in `int` and forms products of them). |
 | `-2` | **Allocation failure.** `std::bad_alloc` or failed `malloc` (notably, allocating the contiguous `answers` buffer in `gnm`). |
 | `-3` | **Internal error / unexpected exception.** Any non-`bad_alloc` exception, or an unexpected negative return from upstream `GNM` (treated as internal error). |

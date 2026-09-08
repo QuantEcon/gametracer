@@ -23,7 +23,8 @@ struct GameSizes {
 };
 
 static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
-    if (num_players <= 0 || actions == nullptr) return false;
+    // IPA and GNM divide by (num_players - 1); at least two players are required
+    if (num_players < 2 || actions == nullptr) return false;
 
     size_t M = 0;
     size_t P = 1;
@@ -41,8 +42,15 @@ static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
     if (M > static_cast<size_t>(INT_MAX)) return false;
     if (P > static_cast<size_t>(INT_MAX)) return false;
 
+    // The core stores matrix dimensions in int and forms products of them
+    // (the largest matrix is the IPA tableau of size (M+N) x (M+N+2)), so
+    // require every such product to fit in int: 46340^2 <= INT_MAX.
+    if (M + static_cast<size_t>(num_players) + 2 > 46340) return false;
+
+    // Check before multiplying: on a 32-bit size_t the product can wrap
+    // (num_players >= 2 was checked above, so the division is safe)
+    if (P > static_cast<size_t>(INT_MAX) / static_cast<size_t>(num_players)) return false;
     size_t payoff_len = static_cast<size_t>(num_players) * P;
-    if (payoff_len > static_cast<size_t>(INT_MAX)) return false;
 
     out.N = num_players;
     out.M = static_cast<int>(M);
@@ -51,9 +59,11 @@ static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
     return true;
 }
 
-static void cleanup_eq(cvector** Eq, int numEq) {
+// GNM keeps the equilibrium array NULL-terminated at all times, so the
+// cleanup does not need a count; this matters when GNM throws.
+static void cleanup_eq(cvector** Eq) {
     if (!Eq) return;
-    for (int k = 0; k < numEq; ++k) {
+    for (int k = 0; Eq[k] != nullptr; ++k) {
         delete Eq[k];
     }
     std::free(Eq);
@@ -138,8 +148,8 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
     if (!compute_sizes(num_players, actions, sz))
         return -1;
 
-    cvector** Eq = nullptr;
-    int found = 0;          // hoisted for exception-safe cleanup
+    cvector** Eq = nullptr; // hoisted for exception-safe cleanup
+    int found = 0;
     double* buf = nullptr;  // in case we allocate and then throw
 
     try {
@@ -158,13 +168,13 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         found = GNM(A, gvec, Eq, steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold);
 
         if (found == 0) {
-            cleanup_eq(Eq, 0);
+            cleanup_eq(Eq);
             *answers = nullptr;
             return 0;
         }
         if (found < 0) {
             // Upstream should not return <0, but treat it as internal error if it happens.
-            cleanup_eq(Eq, 0);
+            cleanup_eq(Eq);
             *answers = nullptr;
             return -3;
         }
@@ -173,7 +183,7 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         size_t total = static_cast<size_t>(found) * static_cast<size_t>(sz.M);
         buf = static_cast<double*>(std::malloc(total * sizeof(double)));
         if (!buf) {
-            cleanup_eq(Eq, found);
+            cleanup_eq(Eq);
             Eq = nullptr;
             return -2;
         }
@@ -184,7 +194,7 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
                         static_cast<size_t>(sz.M) * sizeof(double));
         }
 
-        cleanup_eq(Eq, found);
+        cleanup_eq(Eq);
         Eq = nullptr;
 
         *answers = buf;
@@ -193,12 +203,12 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
 
     } catch (const std::bad_alloc&) {
         if (buf) std::free(buf);
-        cleanup_eq(Eq, (found > 0) ? found : 0);
+        cleanup_eq(Eq);
         *answers = nullptr;
         return -2;
     } catch (...) {
         if (buf) std::free(buf);
-        cleanup_eq(Eq, (found > 0) ? found : 0);
+        cleanup_eq(Eq);
         *answers = nullptr;
         return -3;
     }

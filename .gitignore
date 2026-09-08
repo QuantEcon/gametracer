@@ -42,3 +42,6 @@
 
 # Build directory
 build/
+
+# GameTracer command-line executable built by the Makefile
+/gt
