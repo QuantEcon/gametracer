@@ -23,7 +23,8 @@ struct GameSizes {
 };
 
 static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
-    if (num_players <= 0 || actions == nullptr) return false;
+    // IPA and GNM divide by (num_players - 1); at least two players are required
+    if (num_players < 2 || actions == nullptr) return false;
 
     size_t M = 0;
     size_t P = 1;
