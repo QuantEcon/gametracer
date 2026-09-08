@@ -403,7 +403,7 @@ double cmatrix::adjoint() {
   double D = 1.0;
   // heap-allocated m-by-m work matrix (row-major); m*m doubles can exceed
   // the stack size
-  std::vector<double> retvalbuf(m * m);
+  std::vector<double> retvalbuf(static_cast<size_t>(m) * m);
   double *retval = retvalbuf.data();
 #define RETVAL(i,j) retval[(i)*m+(j)]
   for(i = 0; i < m; i++)

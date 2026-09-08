@@ -42,6 +42,11 @@ static bool compute_sizes(int num_players, const int* actions, GameSizes& out) {
     if (M > static_cast<size_t>(INT_MAX)) return false;
     if (P > static_cast<size_t>(INT_MAX)) return false;
 
+    // The core stores matrix dimensions in int and forms products of them
+    // (the largest matrix is the IPA tableau of size (M+N) x (M+N+2)), so
+    // require every such product to fit in int: 46340^2 <= INT_MAX.
+    if (M + static_cast<size_t>(num_players) + 2 > 46340) return false;
+
     size_t payoff_len = static_cast<size_t>(num_players) * P;
     if (payoff_len > static_cast<size_t>(INT_MAX)) return false;
 

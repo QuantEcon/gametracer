@@ -57,7 +57,7 @@ void nfgame::payoffMatrix(cmatrix &dest, cvector &s, double fuzz) {
   std::vector<double> mbuf(blockSize[numPlayers]);
   double *m = mbuf.data();
   // heap-allocated as well: maxActions*maxActions doubles
-  std::vector<double> localbuf(maxActions*maxActions);
+  std::vector<double> localbuf(static_cast<size_t>(maxActions) * maxActions);
   double *local = localbuf.data();
   for(rown = 0; rown < numPlayers; rown++) {
     for(coln = 0; coln < numPlayers; coln++) {

@@ -270,6 +270,14 @@ void test_invalid_arguments() {
         CHECK(gnm(2, huge_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
     }
 
+    // M = 65536 passes the M, P, N*P checks but M*M overflows int in the core
+    {
+        int big_actions[] = {65535, 1};
+        CHECK(ipa(2, big_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
+        CHECK(gnm(2, big_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(answers == NULL);
+    }
+
     // gametracer_free is safe on NULL
     gametracer_free(NULL);
 }

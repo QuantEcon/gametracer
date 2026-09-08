@@ -195,6 +195,6 @@ Interpret the return value as follows.
 
 | Code | Meaning |
 |---:|---|
-| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `num_players < 2`, `actions[p] <= 0`, overflow of `M`, `P`, or `N*P`. |
+| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `num_players < 2`, `actions[p] <= 0`, overflow of `M`, `P`, or `N*P`, or `M + N + 2 > 46340` (the core stores matrix dimensions in `int` and forms products of them). |
 | `-2` | **Allocation failure.** `std::bad_alloc` or failed `malloc` (notably, allocating the contiguous `answers` buffer in `gnm`). |
 | `-3` | **Internal error / unexpected exception.** Any non-`bad_alloc` exception, or an unexpected negative return from upstream `GNM` (treated as internal error). |
