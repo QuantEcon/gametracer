@@ -104,6 +104,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 
   // INITIALIZATION
   Eq = (cvector **)malloc(sizeof(cvector *));
+  if(Eq == NULL) return numEq;
 
   // Find the lone equilibrium of the perturbed game
   for(n = 0; n < N; n++) {
@@ -292,7 +293,9 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
 	  }
 	  if(ee < fuzz) { // only save high quality equilibria;
 	    // this restriction could be removed.
-	    Eq = (cvector **)realloc(Eq, (numEq+2)*sizeof(cvector *));	
+	    cvector **newEq = (cvector **)realloc(Eq, (numEq+2)*sizeof(cvector *));
+	    if(newEq == NULL) return numEq; // keep the equilibria found so far
+	    Eq = newEq;
 	    Eq[numEq] = new cvector(M);
 	    *(Eq[numEq++]) = sigma;
 	  }
