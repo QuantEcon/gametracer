@@ -9,6 +9,7 @@
 #include "cmatrix.h"
 #include "nfgame.h"
 
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -53,19 +54,29 @@ void test_payoff_matrix_large_game() {
     CHECK(std::fabs(game.getMixedPayoff(0, s) - mean) < 1e-9);
 }
 
-// cmatrix::adjoint used to keep an m-by-m work matrix on the stack.
+// cmatrix::adjoint used to keep an m-by-m work matrix on the stack. A zero
+// matrix still makes adjoint copy the input into that buffer (1100^2 doubles
+// is 9.7 MB), but it exits on the singular matrix after inspecting only two
+// columns, so the test stays cheap in unoptimized builds.
 void test_adjoint_large_matrix() {
-    const int m = 1100;  // 1100^2 doubles is 9.7 MB
+    const int m = 1100;
     cmatrix A(m, m, 0.0);
-    for (int i = 0; i < m; ++i) {
-        A[i][i] = 2.0;
-        if (i + 1 < m) A[i][i + 1] = -1.0;
-    }
+    CHECK(A.adjoint() == DBL_MAX);  // singular
+}
+
+// Checks the values computed by adjoint: for
+//   A = [1 2 3; 0 1 4; 5 6 0]
+// det A = 1 and adj A = inv A = [-24 18 5; 20 -15 -4; -5 4 1].
+void test_adjoint_values() {
+    cmatrix A(3, 3, 0.0);
+    const double a[3][3] = {{1, 2, 3}, {0, 1, 4}, {5, 6, 0}};
+    const double adj[3][3] = {{-24, 18, 5}, {20, -15, -4}, {-5, 4, 1}};
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) A[i][j] = a[i][j];
     double det = A.adjoint();
-    // Upper-triangular with 2 on the diagonal: det = 2^m (overflows to inf
-    // for m = 1100, so only check finiteness of the adjoint entries pattern)
-    CHECK(det == det);          // not NaN
-    CHECK(A[m - 1][m - 1] == A[m - 1][m - 1]);
+    CHECK(std::fabs(det - 1.0) < 1e-12);
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) CHECK(std::fabs(A[i][j] - adj[i][j]) < 1e-12);
 }
 
 }  // namespace
@@ -73,6 +84,7 @@ void test_adjoint_large_matrix() {
 int main() {
     test_payoff_matrix_large_game();
     test_adjoint_large_matrix();
+    test_adjoint_values();
 
     if (g_failures == 0) {
         std::printf("All core tests passed.\n");
