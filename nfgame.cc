@@ -46,7 +46,7 @@ double nfgame::getMixedPayoff(int player, cvector &s) {
   std::vector<double> mbuf(blockSize[numPlayers]);
   double *m = mbuf.data();
   memcpy(m, payoffs.values() + player * blockSize[numPlayers], blockSize[numPlayers]*sizeof(double));
-  return localPayoff(s, m, numPlayers);
+  return localPayoff(s, m, numPlayers - 1);
 }
 
 void nfgame::payoffMatrix(cmatrix &dest, cvector &s, double fuzz) {
