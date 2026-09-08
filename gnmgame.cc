@@ -165,8 +165,9 @@ int indexOf(int *list, int target, int length) {
   return -1;
 }
 
-void gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
+int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
   double D = 1;
+  int status = 1;
   int cg = numActions + numPlayers ;
   int K = cg+1;
   int n, pc, pr, p;
@@ -210,7 +211,10 @@ void gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
 	  }
 	}
       }
-      if(pr < 0) break; // no admissible pivot row (ray termination)
+      if(pr < 0) { // no admissible pivot row (ray termination)
+	status = 0;
+	break;
+      }
       p = Pivot(T, pr, pc, row, col, D);
     } while(p != cg+1);
   }
@@ -221,6 +225,7 @@ void gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
     else
       dest[n] = T[pr][K] / D;
   }
+  return status;
 }
 
 int gnmgame::Pivot(cmatrix &T, int pr, int pc, int *row, int *col, double &D) {

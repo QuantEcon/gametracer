@@ -151,7 +151,8 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
       }
     }
     if(flag) { // update support and solve
-      A.LemkeHowson(s,T,Im);
+      if(!A.LemkeHowson(s,T,Im))
+	return 0; // ray termination; give up
     } else {
       // limit to current support
       for(i = 0; i < M; i++) {
