@@ -432,7 +432,6 @@ double cmatrix::adjoint() {
 	continue;
     }
     if(maxi == -1) {
-      cout << "oops";
       return DBL_MAX;
     }
 
