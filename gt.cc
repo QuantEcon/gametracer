@@ -33,6 +33,7 @@
 #define LAMBDAMIN -10.0
 #define WOBBLE 0
 #define THRESHOLD 1e-2
+#define MAXITER_GNM 5000
 
 // IPA CONSTANTS
 #define ALPHA 0.02
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
 	g[i] = drand48();
       }
       g /= g.norm(); // normalized
-      numEq = GNM(*A, g, answers, STEPS, FUZZ, LNMFREQ, LNMMAX, LAMBDAMIN, WOBBLE, THRESHOLD);
+      numEq = GNM(*A, g, answers, STEPS, FUZZ, LNMFREQ, LNMMAX, LAMBDAMIN, WOBBLE, THRESHOLD, MAXITER_GNM, numIter);
     } while(numEq == 0);
     for(i = 0; i < numEq; i++) {
       cout << *(answers[i]) << endl;
