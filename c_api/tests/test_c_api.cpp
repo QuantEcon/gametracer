@@ -157,23 +157,27 @@ Game mckelvey_mclennan_2x2x2() {
 
 int call_ipa(const Game& g, const std::vector<double>& ray,
              std::vector<double>& zh, double alpha, double fuzz,
-             std::vector<double>& out) {
+             std::vector<double>& out, int& num_iter,
+             int max_iter = 100000, int max_pivots = 1000000) {
     out.assign(g.M(), 0.0);
+    num_iter = -1;
     return ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(),
-               alpha, fuzz, out.data());
+               alpha, fuzz, out.data(), max_iter, max_pivots, &num_iter);
 }
 
 // Returns the number of equilibria (or a negative error code) and fills
 // `eqs` with the equilibria, each of length M.
 int call_gnm(const Game& g, const std::vector<double>& ray,
-             std::vector<std::vector<double> >& eqs,
-             int steps = 100, double fuzz = 1e-12, int lnmfreq = 3,
-             int lnmmax = 10, double lambdamin = -10.0, int wobble = 0,
-             double threshold = 1e-2) {
+             std::vector<std::vector<double> >& eqs, int& num_iter,
+             int max_iter = 5000, int steps = 100, double fuzz = 1e-12,
+             int lnmfreq = 3, int lnmmax = 10, double lambdamin = -10.0,
+             int wobble = 0, double threshold = 1e-2) {
     eqs.clear();
+    num_iter = -1;
     double* answers = reinterpret_cast<double*>(0x1);  // must be reset by gnm
     int ret = gnm(g.N, g.actions.data(), g.payoffs.data(), ray.data(), &answers,
-                  steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold);
+                  steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold,
+                  max_iter, &num_iter);
     const int M = g.M();
     if (ret > 0) {
         CHECK(answers != NULL);
@@ -191,20 +195,24 @@ void test_ipa_von_stengel() {
     std::vector<double> ray = {0.0, 0.0, 1.0, 0.0, 1.0};
     std::vector<double> zh = {1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5};
     std::vector<double> out;
-    int ret = call_ipa(g, ray, zh, 0.02, 1e-6, out);
+    int num_iter;
+    int ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter);
     CHECK(ret == 1);
     CHECK(is_nash(g, out.data(), 1e-6));
     CHECK(close_profile(out.data(), {0.0, 1.0 / 3, 2.0 / 3, 1.0 / 3, 2.0 / 3}, 1e-6));
+    CHECK(num_iter == 1);  // a two-player game is solved in one iteration
 }
 
 void test_gnm_von_stengel() {
     Game g = von_stengel_3x2();
     std::vector<double> ray = {0.0, 0.0, 1.0, 0.0, 1.0};
     std::vector<std::vector<double> > eqs;
-    int ret = call_gnm(g, ray, eqs);
+    int num_iter;
+    int ret = call_gnm(g, ray, eqs, num_iter);
     CHECK(ret == 3);
     for (size_t k = 0; k < eqs.size(); ++k)
         CHECK(is_nash(g, eqs[k].data(), 1e-8));
+    CHECK(num_iter >= 3);  // at least one crossing per equilibrium found
     // The ray is not modified by the shim
     CHECK(close_profile(ray.data(), {0.0, 0.0, 1.0, 0.0, 1.0}, 0.0));
 }
@@ -214,20 +222,106 @@ void test_ipa_mckelvey_mclennan() {
     std::vector<double> ray = {0.3, 0.7, 0.6, 0.4, 0.2, 0.8};
     std::vector<double> zh(g.M(), 1.0);
     std::vector<double> out;
-    int ret = call_ipa(g, ray, zh, 0.02, 1e-6, out);
+    int num_iter;
+    int ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter);
     CHECK(ret == 1);
     CHECK(is_nash(g, out.data(), 1e-5));
+    CHECK(num_iter > 1);
 }
 
 void test_gnm_mckelvey_mclennan() {
     Game g = mckelvey_mclennan_2x2x2();
     std::vector<double> ray = {0.3, 0.7, 0.6, 0.4, 0.2, 0.8};
     std::vector<std::vector<double> > eqs;
-    int ret = call_gnm(g, ray, eqs);
+    int num_iter;
+    int ret = call_gnm(g, ray, eqs, num_iter);
     CHECK(ret > 0);
     CHECK(static_cast<int>(eqs.size()) == ret);
     for (size_t k = 0; k < eqs.size(); ++k)
         CHECK(is_nash(g, eqs[k].data(), 1e-8));
+    CHECK(num_iter >= 1);
+}
+
+// max_iter: IPA returns 0 with the current approximation (a valid mixed
+// action profile) in ans and num_iter == max_iter; with a sufficient limit
+// it converges. max_pivots: a too small limit makes IPA give up.
+void test_ipa_limits() {
+    Game g = mckelvey_mclennan_2x2x2();
+    std::vector<double> ray = {0.3, 0.7, 0.6, 0.4, 0.2, 0.8};
+    std::vector<double> out;
+    int num_iter;
+
+    // Reference run
+    std::vector<double> zh(g.M(), 1.0);
+    int ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter);
+    CHECK(ret == 1);
+    const int needed = num_iter;
+    CHECK(needed > 10);
+
+    // Iteration limit reached
+    for (int cap = 1; cap <= 10; cap += 9) {
+        zh.assign(g.M(), 1.0);
+        ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter, cap);
+        CHECK(ret == 0);
+        CHECK(num_iter == cap);
+        CHECK(is_mixed_action_profile(g, out.data(), 1e-12));
+    }
+
+    // Exactly enough iterations
+    zh.assign(g.M(), 1.0);
+    ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter, needed);
+    CHECK(ret == 1);
+    CHECK(num_iter == needed);
+    CHECK(is_nash(g, out.data(), 1e-5));
+
+    // Pivot limit: the three-player run needs more than 2 pivots in some
+    // Lemke-Howson solve, the 3x2 game needs more than 3 in its only one
+    zh.assign(g.M(), 1.0);
+    ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter, 100000, 2);
+    CHECK(ret == 0);
+    CHECK(num_iter >= 1 && num_iter < needed);
+
+    Game g2 = von_stengel_3x2();
+    std::vector<double> ray2 = {0.0, 0.0, 1.0, 0.0, 1.0};
+    std::vector<double> zh2 = {1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5};
+    ret = call_ipa(g2, ray2, zh2, 0.02, 1e-6, out, num_iter, 100000, 3);
+    CHECK(ret == 0);
+    CHECK(num_iter == 1);
+    zh2 = {1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5};
+    ret = call_ipa(g2, ray2, zh2, 0.02, 1e-6, out, num_iter, 100000, 5);
+    CHECK(ret == 1);
+    CHECK(is_nash(g2, out.data(), 1e-6));
+}
+
+// max_iter: GNM returns the equilibria found so far and num_iter == max_iter
+// when the limit is reached; the first few crossings of the 3x2 game find
+// its three equilibria one by one.
+void test_gnm_limits() {
+    Game g = von_stengel_3x2();
+    std::vector<double> ray = {0.0, 0.0, 1.0, 0.0, 1.0};
+    std::vector<std::vector<double> > eqs;
+    int num_iter;
+
+    int ret = call_gnm(g, ray, eqs, num_iter);
+    CHECK(ret == 3);
+    const int needed = num_iter;
+    CHECK(needed > 3);
+
+    int prev = 0;
+    for (int cap = 1; cap < needed; ++cap) {
+        ret = call_gnm(g, ray, eqs, num_iter, cap);
+        CHECK(ret >= 0 && ret <= 3);
+        CHECK(ret >= prev);  // equilibria are found in path order
+        CHECK(num_iter == cap);
+        for (size_t k = 0; k < eqs.size(); ++k)
+            CHECK(is_nash(g, eqs[k].data(), 1e-8));
+        prev = ret;
+    }
+    CHECK(prev < 3);  // the last crossing is needed for the third equilibrium
+
+    ret = call_gnm(g, ray, eqs, num_iter, needed);
+    CHECK(ret == 3);
+    CHECK(num_iter == needed);
 }
 
 void test_invalid_arguments() {
@@ -236,45 +330,45 @@ void test_invalid_arguments() {
     double* answers = NULL;
 
     // null pointers
-    CHECK(ipa(g.N, NULL, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-    CHECK(ipa(g.N, g.actions.data(), NULL, ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), NULL, zh.data(), 0.02, 1e-6, out.data()) == -1);
-    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), NULL, 0.02, 1e-6, out.data()) == -1);
-    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, NULL) == -1);
-    CHECK(gnm(g.N, NULL, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+    CHECK(ipa(g.N, NULL, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+    CHECK(ipa(g.N, g.actions.data(), NULL, ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), NULL, zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), NULL, 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+    CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, NULL, 100000, 1000000, NULL) == -1);
+    CHECK(gnm(g.N, NULL, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
     CHECK(answers == NULL);
-    CHECK(gnm(g.N, g.actions.data(), g.payoffs.data(), ray.data(), NULL, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+    CHECK(gnm(g.N, g.actions.data(), g.payoffs.data(), ray.data(), NULL, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
 
     // fewer than two players
     {
         int actions1[] = {3};
         double payoffs1[] = {1.0, 2.0, 3.0};
         double ray1[] = {0.1, 0.2, 0.3}, zh1[] = {1.0, 1.0, 1.0}, out1[3];
-        CHECK(ipa(1, actions1, payoffs1, ray1, zh1, 0.02, 1e-6, out1) == -1);
-        CHECK(gnm(1, actions1, payoffs1, ray1, &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(ipa(1, actions1, payoffs1, ray1, zh1, 0.02, 1e-6, out1, 100000, 1000000, NULL) == -1);
+        CHECK(gnm(1, actions1, payoffs1, ray1, &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
         CHECK(answers == NULL);
-        CHECK(ipa(0, actions1, payoffs1, ray1, zh1, 0.02, 1e-6, out1) == -1);
+        CHECK(ipa(0, actions1, payoffs1, ray1, zh1, 0.02, 1e-6, out1, 100000, 1000000, NULL) == -1);
     }
 
     // non-positive action counts
     {
         int bad_actions[] = {3, 0};
-        CHECK(ipa(2, bad_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-        CHECK(gnm(2, bad_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(ipa(2, bad_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+        CHECK(gnm(2, bad_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
     }
 
     // size overflow
     {
         int huge_actions[] = {INT_MAX, INT_MAX};
-        CHECK(ipa(2, huge_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-        CHECK(gnm(2, huge_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(ipa(2, huge_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+        CHECK(gnm(2, huge_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
     }
 
     // M = 65536 passes the M, P, N*P checks but M*M overflows int in the core
     {
         int big_actions[] = {65535, 1};
-        CHECK(ipa(2, big_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-        CHECK(gnm(2, big_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(ipa(2, big_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+        CHECK(gnm(2, big_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
         CHECK(answers == NULL);
     }
 
@@ -283,9 +377,27 @@ void test_invalid_arguments() {
     {
         int many_actions[32];
         for (int p = 0; p < 32; ++p) many_actions[p] = (p < 27) ? 2 : 1;
-        CHECK(ipa(32, many_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data()) == -1);
-        CHECK(gnm(32, many_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2) == -1);
+        CHECK(ipa(32, many_actions, g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == -1);
+        CHECK(gnm(32, many_actions, g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) == -1);
         CHECK(answers == NULL);
+    }
+
+    // iteration limits must be positive; num_iter may be NULL
+    {
+        int num_iter = 7;
+        CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 0, 1000000, &num_iter) == -1);
+        CHECK(num_iter == 0);
+        CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 0, NULL) == -1);
+        num_iter = 7;
+        CHECK(gnm(g.N, g.actions.data(), g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 0, &num_iter) == -1);
+        CHECK(num_iter == 0);
+        CHECK(answers == NULL);
+        CHECK(ipa(g.N, g.actions.data(), g.payoffs.data(), ray.data(), zh.data(), 0.02, 1e-6, out.data(), 100000, 1000000, NULL) == 1);
+        // (the all-ones ray is a degenerate perturbation for GNM, which then
+        // finds no equilibria; only the NULL num_iter acceptance is tested)
+        CHECK(gnm(g.N, g.actions.data(), g.payoffs.data(), ray.data(), &answers, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL) >= 0);
+        gametracer_free(answers);
+        answers = NULL;
     }
 
     // gametracer_free is safe on NULL
@@ -299,6 +411,8 @@ int main() {
     test_gnm_von_stengel();
     test_ipa_mckelvey_mclennan();
     test_gnm_mckelvey_mclennan();
+    test_ipa_limits();
+    test_gnm_limits();
     test_invalid_arguments();
 
     if (g_failures == 0) {
