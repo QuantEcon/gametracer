@@ -103,21 +103,27 @@ out = Vector{Float64}(undef, M)
 # Parameters
 alpha = 0.02
 fuzz = 1e-6
+max_iter = 100000    # Maximum number of iterations (polymatrix approximations)
+max_pivots = 1000000 # Maximum number of pivoting steps per Lemke-Howson solve
+
+# Out parameter (`int* num_iter`): receives the number of iterations performed
+num_iter = Ref{Cint}(0)
 
 ret_ipa = ccall((:ipa, LIBPATH), Cint,
     (Cint, Ptr{Cint}, Ptr{Cdouble},
      Ptr{Cdouble}, Ptr{Cdouble},
      Cdouble, Cdouble,
-     Ptr{Cdouble}),
+     Ptr{Cdouble}, Cint, Cint, Ref{Cint}),
     N, actions, payoffs,
     ray, init,
     alpha, fuzz,
-    out)
+    out, max_iter, max_pivots, num_iter)
 
 ret_ipa > 0 || error("ipa failed (ret = $ret_ipa)")
 
 println("IPA")
 println(out)  # Flattened mixed-action profile
+println("iterations: ", num_iter[])
 
 # --- GNM ---
 
@@ -136,14 +142,20 @@ lnmmax = 10
 lambdamin = -10.0
 wobble = 0
 threshold = 1e-2
+max_iter = 5000  # Maximum number of iterations (support cells traversed)
+
+# Out parameter (`int* num_iter`): receives the number of iterations performed
+num_iter = Ref{Cint}(0)
 
 ret_gnm = ccall((:gnm, LIBPATH), Cint,
     (Cint, Ptr{Cint}, Ptr{Cdouble},
      Ptr{Cdouble}, Ref{Ptr{Cdouble}},
-     Cint, Cdouble, Cint, Cint, Cdouble, Cint, Cdouble),
+     Cint, Cdouble, Cint, Cint, Cdouble, Cint, Cdouble,
+     Cint, Ref{Cint}),
     N, actions, payoffs,
     ray, answers_ref,
-    steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold)
+    steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold,
+    max_iter, num_iter)
 
 if ret_gnm < 0
     error("gnm failed (ret = $ret_gnm)")
@@ -169,7 +181,24 @@ else
         println(answers[:, j])  # Flattened mixed-action profile
     end
 end
+println("iterations: ", num_iter[])
 ```
+
+## Iteration limits
+
+- `ipa`: `max_iter` bounds the number of iterations (polymatrix
+  approximations) and `max_pivots` bounds the number of pivoting steps in
+  each Lemke-Howson solve of a polymatrix approximation. Both must be at
+  least 1. If `max_iter` is reached before the accuracy cutoff `fuzz` is
+  met, `ipa` returns 0 with the current approximation in `ans`.
+- `gnm`: `max_iter` bounds the number of iterations, where an iteration is
+  the traversal of one support cell (the path crosses one support boundary
+  per iteration). Must be at least 1. If it is reached, the equilibria
+  found so far are returned. This is the only guard against a path that
+  cycles.
+- Both functions store the number of iterations performed in `*num_iter`
+  (if `num_iter` is not `NULL`). A run stopped by `max_iter` has
+  `*num_iter == max_iter`.
 
 ## Return codes
 
@@ -178,14 +207,18 @@ Interpret the return value as follows.
 
 ### `ipa`
 
-- `ret > 0` : success
-- `ret == 0`: failure / no equilibrium found
+- `ret == 1`: success; `ans` holds an equilibrium
+- `ret == 0`: no equilibrium found; either `max_iter` was reached (`ans`
+  holds the current approximation and `*num_iter == max_iter`), or the
+  solver gave up (singular support system, Lemke-Howson ray termination,
+  or `max_pivots` reached; `ans` is not written)
 - `ret < 0` : error code (see **Error codes** below)
 
 ### `gnm`
 
 - `ret > 0` : success; `ret` is the number of equilibria found
   - on success, `*answers` points to a contiguous `malloc`’d buffer of length `num_eq * M`
+  - if `max_iter` was reached, these are the equilibria found so far
 - `ret == 0`: success; found 0 equilibria
   - in this case, `*answers == NULL`
 - `ret < 0` : error code (see **Error codes** below)
@@ -195,6 +228,6 @@ Interpret the return value as follows.
 
 | Code | Meaning |
 |---:|---|
-| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `num_players < 2`, `actions[p] <= 0`, overflow of `M`, `P`, or `N*P`, or `M + N + 2 > 46340` (the core stores matrix dimensions in `int` and forms products of them). |
+| `-1` | **Invalid arguments / size overflow**. E.g., null pointer, `num_players < 2`, `actions[p] <= 0`, `max_iter < 1`, `max_pivots < 1`, overflow of `M`, `P`, or `N*P`, or `M + N + 2 > 46340` (the core stores matrix dimensions in `int` and forms products of them). |
 | `-2` | **Allocation failure.** `std::bad_alloc` or failed `malloc` (notably, allocating the contiguous `answers` buffer in `gnm`). |
 | `-3` | **Internal error / unexpected exception.** Any non-`bad_alloc` exception, or an unexpected negative return from upstream `GNM` (treated as internal error). |
