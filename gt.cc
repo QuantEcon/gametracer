@@ -37,6 +37,8 @@
 // IPA CONSTANTS
 #define ALPHA 0.02
 #define EQERR 1e-6
+#define MAXITER_IPA 100000
+#define MAXPIVOTS 1000000
 
 void usage(char *name) { 
   cout << "GameTracer 0.2\n\
@@ -89,7 +91,7 @@ int main(int argc, char **argv) {
   
   srand48(seed);
   cvector g(A->getNumActions()); // choose a random perturbation ray
-  int numEq;
+  int numEq, numIter;
   if(doipa) {
     cvector ans(A->getNumActions());
     cvector zh(A->getNumActions(),1.0);
@@ -98,7 +100,7 @@ int main(int argc, char **argv) {
 	g[i] = drand48();
       }
       g /= g.norm(); // normalized
-      numEq = IPA(*A, g, zh, ALPHA, EQERR, ans);
+      numEq = IPA(*A, g, zh, ALPHA, EQERR, ans, MAXITER_IPA, MAXPIVOTS, numIter);
   } while(numEq == 0);
   if(numEq)
     cout << ans << endl;

@@ -165,9 +165,9 @@ int indexOf(int *list, int target, int length) {
   return -1;
 }
 
-int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
+int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im, int maxPivots) {
   double D = 1;
-  int status = 1;
+  int status = 1, pivots = 0;
   int cg = numActions + numPlayers ;
   int K = cg+1;
   int n, pc, pr, p;
@@ -216,6 +216,10 @@ int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im) {
 	break;
       }
       p = Pivot(T, pr, pc, row, col, D);
+      if(p != cg+1 && ++pivots >= maxPivots) { // pivot limit reached
+	status = 0;
+	break;
+      }
     } while(p != cg+1);
   }
   for(n = 0; n < numActions; n++) {
