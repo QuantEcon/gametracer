@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
       }
       g /= g.norm(); // normalized
       numEq = GNM(*A, g, answers, STEPS, FUZZ, LNMFREQ, LNMMAX, LAMBDAMIN, WOBBLE, THRESHOLD, MAXITER_GNM, numIter);
+      if(numEq == 0)
+	free(answers); // GNM allocates the array even when it finds nothing
     } while(numEq == 0);
     for(i = 0; i < numEq; i++) {
       cout << *(answers[i]) << endl;
