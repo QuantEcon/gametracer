@@ -190,7 +190,7 @@ println("iterations: ", num_iter[])
   approximations) and `max_pivots` bounds the number of pivoting steps in
   each Lemke-Howson solve of a polymatrix approximation. Both must be at
   least 1. If `max_iter` is reached before the accuracy cutoff `fuzz` is
-  met, `ipa` returns 0 with the current approximation in `ans`.
+  met, `ipa` returns 0 with the last iterate in `ans`.
 - `gnm`: `max_iter` bounds the number of iterations, where an iteration is
   the traversal of one support cell (the path crosses one support boundary
   per iteration). Must be at least 1. If it is reached, the equilibria
@@ -208,10 +208,10 @@ Interpret the return value as follows.
 ### `ipa`
 
 - `ret == 1`: success; `ans` holds an equilibrium
-- `ret == 0`: no equilibrium found; either `max_iter` was reached (`ans`
-  holds the current approximation and `*num_iter == max_iter`), or the
-  solver gave up (singular support system, Lemke-Howson ray termination,
-  or `max_pivots` reached; `ans` is not written)
+- `ret == 0`: no equilibrium found; either `max_iter` was reached
+  (`*num_iter == max_iter`), or the solver gave up (singular support
+  system, Lemke-Howson ray termination, or `max_pivots` reached); in both
+  cases `ans` holds the last iterate, a valid mixed action profile
 - `ret < 0` : error code (see **Error codes** below)
 
 ### `gnm`

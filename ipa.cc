@@ -33,14 +33,15 @@
 //       stops refining it
 // ans: a pre-allocated vector in which the equilibrium will be stored
 // maxIter: the maximum number of iterations (polymatrix approximations).
-//          Must be at least 1.  If it is reached before the accuracy
-//          cutoff is met, the current approximation is stored in ans
-//          and 0 is returned.
+//          Must be at least 1.
 // maxPivots: the maximum number of pivoting steps in each Lemke-Howson
 //            solve of a polymatrix approximation.  Must be at least 1.
-//            If it is reached, 0 is returned (ans is not written).
 // numIter: the number of iterations performed is stored here.
-// Returns 1 if an equilibrium was found, 0 otherwise.
+// Returns 1 if an equilibrium was found, 0 otherwise.  In the latter
+// case, either maxIter was reached before the accuracy cutoff was met
+// (numIter == maxIter), or the algorithm gave up (singular support
+// system, or Lemke-Howson ray termination or pivot limit); in both
+// cases ans holds the last iterate.
 
 int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector &ans, int maxIter, int maxPivots, int &numIter) {
   int N = A.getNumPlayers(),
@@ -148,8 +149,10 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
     }
     
     // find equilibrium assuming current support
-    if(!T2.solve(ymn1, ymn2))
-      return 0; // singular system; give up
+    if(!T2.solve(ymn1, ymn2)) { // singular system; give up
+      ans = so;
+      return 0;
+    }
     
     for(i = 0; i < M; i++)
       s[i] = ymn2[i];
@@ -162,8 +165,10 @@ int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector 
       }
     }
     if(flag) { // update support and solve
-      if(!A.LemkeHowson(s,T,Im,maxPivots))
-	return 0; // ray termination or pivot limit; give up
+      if(!A.LemkeHowson(s,T,Im,maxPivots)) { // ray termination or pivot
+	ans = so;                            // limit; give up
+	return 0;
+      }
     } else {
       // limit to current support
       for(i = 0; i < M; i++) {

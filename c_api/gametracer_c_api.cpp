@@ -123,8 +123,7 @@ GAMETRACER_API int GAMETRACER_CALL ipa(
         int ret = IPA(A, gvec, zhvec, alpha, fuzz, ansvec, max_iter, max_pivots, iters);
         if (num_iter) *num_iter = iters;
 
-        // Copy back outputs (ans is written by IPA on success and when
-        // max_iter is reached; copy unconditionally, as before)
+        // Copy back outputs (IPA writes ans on every return)
         std::memcpy(zh, zhvec.values(), static_cast<size_t>(sz.M) * sizeof(double));
         std::memcpy(ans, ansvec.values(), static_cast<size_t>(sz.M) * sizeof(double));
 
