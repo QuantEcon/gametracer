@@ -50,10 +50,11 @@
 //            wobbles are disabled, GNM will terminate if the error
 //            reaches this threshold.
 // maxIter: the maximum number of iterations, where an iteration is the
-//          traversal of one support cell (the path crosses one support
-//          boundary per iteration).  Must be at least 1.  If it is
+//          traversal of one support cell.  Must be at least 1.  If it is
 //          reached, the equilibria found so far are returned.
-// numIter: the number of iterations performed is stored here.
+// numIter: the number of iterations performed, i.e. of support cells
+//          entered, is stored here (the last one may be left before its
+//          boundary is crossed).
 // Returns the number of equilibria found.
 
 int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFreq, int LNMMax, double LambdaMin, int wobble, double threshold, int maxIter, int &numIter) {

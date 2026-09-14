@@ -193,13 +193,16 @@ println("iterations: ", num_iter[])
   be at least 1. If `max_iter` is reached before the accuracy cutoff `fuzz` is
   met, `ipa` returns 0 with the last iterate in `ans`.
 - `gnm`: `max_iter` bounds the number of iterations, where an iteration is
-  the traversal of one support cell (the path crosses one support boundary
-  per iteration). Must be at least 1. If it is reached, the equilibria
-  found so far are returned. This is the only guard against a path that
-  cycles.
+  the traversal of one support cell. Must be at least 1. If it is reached,
+  the equilibria found so far are returned. This is the only guard against
+  a path that cycles.
 - Both functions store the number of iterations performed in `*num_iter`
-  (if `num_iter` is not `NULL`). A run stopped by `max_iter` has
-  `*num_iter == max_iter`.
+  (if `num_iter` is not `NULL`): for `ipa` the number of polymatrix
+  approximations, for `gnm` the number of support cells entered (the last
+  one may be left before its boundary is crossed). Reaching `max_iter`
+  implies `*num_iter == max_iter`, but the converse need not hold: `ipa`
+  may give up, and the path of `gnm` may end, during the last allowed
+  iteration.
 
 ## Return codes
 
@@ -209,11 +212,11 @@ Interpret the return value as follows.
 ### `ipa`
 
 - `ret == 1`: success; `ans` holds an equilibrium
-- `ret == 0`: no equilibrium found; either `max_iter` was reached
-  (`*num_iter == max_iter`), or the solver gave up (singular support
-  system, Lemke-Howson ray termination, or `max_pivots` reached); in both
-  cases `ans` holds the last iterate, a valid mixed action profile
-- `ret < 0` : error code (see **Error codes** below)
+- `ret == 0`: no equilibrium found; either `max_iter` was reached, or the
+  solver gave up (singular support system, Lemke-Howson ray termination,
+  or `max_pivots` reached); in both cases `ans` holds the last iterate, a
+  valid mixed action profile
+- `ret < 0` : error code (see **Error codes** below); `ans` is unchanged
 
 ### `gnm`
 

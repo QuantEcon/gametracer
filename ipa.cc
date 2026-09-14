@@ -38,10 +38,10 @@
 //            solve of a polymatrix approximation.  Must be at least 1.
 // numIter: the number of iterations performed is stored here.
 // Returns 1 if an equilibrium was found, 0 otherwise.  In the latter
-// case, either maxIter was reached before the accuracy cutoff was met
-// (numIter == maxIter), or the algorithm gave up (singular support
-// system, or Lemke-Howson ray termination or pivot limit); in both
-// cases ans holds the last iterate.
+// case, either maxIter was reached before the accuracy cutoff was met,
+// or the algorithm gave up (singular support system, or Lemke-Howson
+// ray termination or pivot limit), possibly during the last allowed
+// iteration; in both cases ans holds the last iterate.
 
 int IPA(gnmgame &A, cvector &g, cvector &zh, double alpha, double fuzz, cvector &ans, int maxIter, int maxPivots, int &numIter) {
   int N = A.getNumPlayers(),

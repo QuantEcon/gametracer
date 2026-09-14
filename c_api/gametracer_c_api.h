@@ -45,8 +45,9 @@ ipa:
 - Inputs: game (num_players, actions, payoffs), g (length M), alpha, fuzz,
   max_iter, max_pivots
 - zh is an in/out work buffer of length M (mutated)
-- ans is output buffer of length M (always written when the core is
-  reached: the equilibrium on success, the last iterate otherwise)
+- ans is output buffer of length M; on return values 1 and 0 it holds
+  the equilibrium and the last iterate, respectively; on negative return
+  values it is unchanged
 - max_iter: maximum number of iterations (polymatrix approximations), >= 1
 - max_pivots: maximum number of pivoting steps along the Lemke-Howson path
   in each solve of a polymatrix approximation (the entry pivot included,
@@ -54,10 +55,12 @@ ipa:
 - num_iter: if not NULL, receives the number of iterations performed
 Return value:
 - 1 : success; ans holds an equilibrium
-- 0 : no equilibrium found; either max_iter was reached
-      (*num_iter == max_iter) or the solver gave up (singular support
-      system, Lemke-Howson ray termination, or max_pivots reached); in
-      both cases ans holds the last iterate, a valid mixed action profile
+- 0 : no equilibrium found; either max_iter was reached or the solver
+      gave up (singular support system, Lemke-Howson ray termination, or
+      max_pivots reached); in both cases ans holds the last iterate, a
+      valid mixed action profile. Reaching max_iter implies
+      *num_iter == max_iter; the converse need not hold, since the solver
+      can give up during the last allowed iteration
 - <0: shim-detected error:
     -1 invalid args (null pointer, num_players < 2, actions[p] <= 0,
        max_iter < 1, max_pivots < 1) / size overflow
@@ -85,9 +88,11 @@ gnm:
 - Inputs: game (num_players, actions, payoffs), g (length M), algorithm params
 - g is treated as immutable by the shim (copied before calling upstream GNM)
 - max_iter: maximum number of iterations, >= 1, where an iteration is the
-  traversal of one support cell (the path crosses one support boundary per
-  iteration); if reached, the equilibria found so far are returned
-- num_iter: if not NULL, receives the number of iterations performed
+  traversal of one support cell; if reached, the equilibria found so far
+  are returned
+- num_iter: if not NULL, receives the number of iterations performed, i.e.
+  of support cells entered (the last one may be left before its boundary
+  is crossed, so the count is a measure of work, not of crossings)
 - Output:
     *answers = malloc'd buffer of length (ret * M) doubles, or NULL if ret == 0
               layout: answers[k*M + i] is i-th entry of equilibrium k
