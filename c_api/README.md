@@ -187,9 +187,10 @@ println("iterations: ", num_iter[])
 ## Iteration limits
 
 - `ipa`: `max_iter` bounds the number of iterations (polymatrix
-  approximations) and `max_pivots` bounds the number of pivoting steps in
-  each Lemke-Howson solve of a polymatrix approximation. Both must be at
-  least 1. If `max_iter` is reached before the accuracy cutoff `fuzz` is
+  approximations) and `max_pivots` bounds the number of pivoting steps
+  along the Lemke-Howson path in each solve of a polymatrix approximation
+  (the entry pivot included, the basis setup pivots excluded). Both must
+  be at least 1. If `max_iter` is reached before the accuracy cutoff `fuzz` is
   met, `ipa` returns 0 with the last iterate in `ans`.
 - `gnm`: `max_iter` bounds the number of iterations, where an iteration is
   the traversal of one support cell (the path crosses one support boundary

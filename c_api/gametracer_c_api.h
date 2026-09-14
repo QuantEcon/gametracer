@@ -48,8 +48,9 @@ ipa:
 - ans is output buffer of length M (always written when the core is
   reached: the equilibrium on success, the last iterate otherwise)
 - max_iter: maximum number of iterations (polymatrix approximations), >= 1
-- max_pivots: maximum number of pivoting steps in each Lemke-Howson solve
-  of a polymatrix approximation, >= 1
+- max_pivots: maximum number of pivoting steps along the Lemke-Howson path
+  in each solve of a polymatrix approximation (the entry pivot included,
+  the basis setup pivots excluded), >= 1
 - num_iter: if not NULL, receives the number of iterations performed
 Return value:
 - 1 : success; ans holds an equilibrium

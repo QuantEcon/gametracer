@@ -275,18 +275,22 @@ void test_ipa_limits() {
     CHECK(is_nash(g, out.data(), 1e-5));
 
     // Pivot limit: the three-player run needs more than 2 pivots in some
-    // Lemke-Howson solve, the 3x2 game needs more than 3 in its only one
+    // Lemke-Howson solve; on giving up, ans holds the last iterate
     zh.assign(g.M(), 1.0);
     ret = call_ipa(g, ray, zh, 0.02, 1e-6, out, num_iter, 100000, 2);
     CHECK(ret == 0);
     CHECK(num_iter >= 1 && num_iter < needed);
+    CHECK(is_mixed_action_profile(g, out.data(), 1e-12));
 
+    // The Lemke-Howson path of the 3x2 game has exactly 5 pivots (the
+    // entry pivot included)
     Game g2 = von_stengel_3x2();
     std::vector<double> ray2 = {0.0, 0.0, 1.0, 0.0, 1.0};
     std::vector<double> zh2 = {1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5};
-    ret = call_ipa(g2, ray2, zh2, 0.02, 1e-6, out, num_iter, 100000, 3);
+    ret = call_ipa(g2, ray2, zh2, 0.02, 1e-6, out, num_iter, 100000, 4);
     CHECK(ret == 0);
     CHECK(num_iter == 1);
+    CHECK(is_mixed_action_profile(g2, out.data(), 1e-12));
     zh2 = {1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5};
     ret = call_ipa(g2, ray2, zh2, 0.02, 1e-6, out, num_iter, 100000, 5);
     CHECK(ret == 1);

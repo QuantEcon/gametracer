@@ -75,8 +75,10 @@ class gnmgame {
   void normalizeStrategy(cvector &s);
 
   // Returns 1 on normal termination, 0 on ray termination (no admissible
-  // pivot row) or when maxPivots pivoting steps have been taken without
-  // termination, in which cases dest is not a solution.
+  // pivot row) or when maxPivots pivoting steps along the Lemke-Howson
+  // path (the entry pivot included, the basis setup pivots excluded)
+  // have been taken without termination, in which cases dest is not a
+  // solution.
   int LemkeHowson(cvector &dest, cmatrix &T, int *Im, int maxPivots);
 
 

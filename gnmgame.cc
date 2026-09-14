@@ -198,8 +198,15 @@ int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im, int maxPivots) {
   }
 
   if(m > 0) {
+    // Lemke-Howson path: the entry pivot and every pivot after it count
+    // towards maxPivots (the basis setup pivots above do not)
     p = Pivot(T, pr, pc, row, col, D);
+    pivots = 1;
     do {
+      if(pivots >= maxPivots) { // pivot limit reached
+	status = 0;
+	break;
+      }
       pc = indexOf(col, -p, numActions+numPlayers+2);
       m = BIGFLOAT;
       pr = -1;
@@ -216,10 +223,7 @@ int gnmgame::LemkeHowson(cvector &dest, cmatrix &T, int *Im, int maxPivots) {
 	break;
       }
       p = Pivot(T, pr, pc, row, col, D);
-      if(p != cg+1 && ++pivots >= maxPivots) { // pivot limit reached
-	status = 0;
-	break;
-      }
+      pivots++;
     } while(p != cg+1);
   }
   for(n = 0; n < numActions; n++) {
