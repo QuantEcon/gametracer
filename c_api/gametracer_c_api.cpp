@@ -85,14 +85,23 @@ GAMETRACER_API int GAMETRACER_CALL ipa(
     double* zh,
     double alpha,
     double fuzz,
-    double* ans
+    double* ans,
+    int max_iter,
+    int max_pivots,
+    int* num_iter
 ) {
+    if (num_iter) *num_iter = 0;
+
     if (actions == nullptr || payoffs == nullptr || g == nullptr || zh == nullptr || ans == nullptr)
+        return -1;
+    if (max_iter < 1 || max_pivots < 1)
         return -1;
 
     GameSizes sz;
     if (!compute_sizes(num_players, actions, sz))
         return -1;
+
+    int iters = 0; // hoisted so that a partial count is reported on exceptions
 
     try {
         std::vector<int> acts(static_cast<size_t>(sz.N));
@@ -111,16 +120,19 @@ GAMETRACER_API int GAMETRACER_CALL ipa(
 
         cvector ansvec(sz.M);
 
-        int ret = IPA(A, gvec, zhvec, alpha, fuzz, ansvec);
+        int ret = IPA(A, gvec, zhvec, alpha, fuzz, ansvec, max_iter, max_pivots, iters);
+        if (num_iter) *num_iter = iters;
 
-        // Copy back outputs
+        // Copy back outputs (IPA writes ans on every return)
         std::memcpy(zh, zhvec.values(), static_cast<size_t>(sz.M) * sizeof(double));
         std::memcpy(ans, ansvec.values(), static_cast<size_t>(sz.M) * sizeof(double));
 
         return ret;
     } catch (const std::bad_alloc&) {
+        if (num_iter) *num_iter = iters;
         return -2;
     } catch (...) {
+        if (num_iter) *num_iter = iters;
         return -3;
     }
 }
@@ -137,11 +149,16 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
     int lnmmax,
     double lambdamin,
     int wobble,
-    double threshold
+    double threshold,
+    int max_iter,
+    int* num_iter
 ) {
     if (answers) *answers = nullptr;
+    if (num_iter) *num_iter = 0;
 
     if (actions == nullptr || payoffs == nullptr || g == nullptr || answers == nullptr)
+        return -1;
+    if (max_iter < 1)
         return -1;
 
     GameSizes sz;
@@ -150,6 +167,7 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
 
     cvector** Eq = nullptr; // hoisted for exception-safe cleanup
     int found = 0;
+    int iters = 0;          // hoisted so that a partial count is reported on exceptions
     double* buf = nullptr;  // in case we allocate and then throw
 
     try {
@@ -165,7 +183,8 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         cvector gvec(sz.M);
         std::memcpy(gvec.values(), g, static_cast<size_t>(sz.M) * sizeof(double));
 
-        found = GNM(A, gvec, Eq, steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold);
+        found = GNM(A, gvec, Eq, steps, fuzz, lnmfreq, lnmmax, lambdamin, wobble, threshold, max_iter, iters);
+        if (num_iter) *num_iter = iters;
 
         if (found == 0) {
             cleanup_eq(Eq);
@@ -205,11 +224,13 @@ GAMETRACER_API int GAMETRACER_CALL gnm(
         if (buf) std::free(buf);
         cleanup_eq(Eq);
         *answers = nullptr;
+        if (num_iter) *num_iter = iters;
         return -2;
     } catch (...) {
         if (buf) std::free(buf);
         cleanup_eq(Eq);
         *answers = nullptr;
+        if (num_iter) *num_iter = iters;
         return -3;
     }
 }

@@ -153,10 +153,11 @@ void test_gnm_allocation_failure() {
         nfgame A(3, acts.data(), payvec);
         cvector gvec(g.ray, 6);
         cvector** Eq = NULL;
+        int iters = 0;
 
         long outstanding = g_new_count - g_delete_count;
         long new_before = g_new_count;
-        int ret = GNM(A, gvec, Eq, 100, 1e-12, 3, 10, -10.0, 0, 1e-2);
+        int ret = GNM(A, gvec, Eq, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, iters);
         CHECK(ret >= 2);
         int saved = 0;
         for (; Eq[saved] != NULL; ++saved) {}
@@ -172,7 +173,7 @@ void test_gnm_allocation_failure() {
         g_fail_at = g_new_count + total - 1;
         bool threw = false;
         try {
-            GNM(A, gvec, Eq, 100, 1e-12, 3, 10, -10.0, 0, 1e-2);
+            GNM(A, gvec, Eq, 100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, iters);
         } catch (const std::bad_alloc&) {
             threw = true;
         }
@@ -195,7 +196,7 @@ void test_gnm_allocation_failure() {
         long outstanding = g_new_count - g_delete_count;
         long new_before = g_new_count;
         int ret = gnm(3, g.actions, g.payoffs, g.ray, &answers,
-                      100, 1e-12, 3, 10, -10.0, 0, 1e-2);
+                      100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL);
         CHECK(ret >= 2);
         gametracer_free(answers);
         CHECK(g_new_count - g_delete_count == outstanding);
@@ -204,7 +205,7 @@ void test_gnm_allocation_failure() {
         answers = reinterpret_cast<double*>(0x1);
         g_fail_at = g_new_count + total - 1;
         ret = gnm(3, g.actions, g.payoffs, g.ray, &answers,
-                  100, 1e-12, 3, 10, -10.0, 0, 1e-2);
+                  100, 1e-12, 3, 10, -10.0, 0, 1e-2, 5000, NULL);
         g_fail_at = -1;
         CHECK(ret == -2);
         CHECK(answers == NULL);

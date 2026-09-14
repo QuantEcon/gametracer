@@ -22,8 +22,8 @@
 #include "gnmgame.h"
 #include <new>
 
-// gnm(A,g,Eq,steps,fuzz,LNMFreq,LNMMax,LambdaMin,wobble,threshold)
-// ----------------------------------------------------------------
+// gnm(A,g,Eq,steps,fuzz,LNMFreq,LNMMax,LambdaMin,wobble,threshold,maxIter,numIter)
+// --------------------------------------------------------------------------------
 // This executes the GNM algorithm on game A.
 // Interpretation of parameters:
 // g: perturbation ray.
@@ -49,8 +49,15 @@
 // threshold: the equilibrium error threshold for doing a wobble.  If
 //            wobbles are disabled, GNM will terminate if the error
 //            reaches this threshold.
+// maxIter: the maximum number of iterations, where an iteration is the
+//          traversal of one support cell.  Must be at least 1.  If it is
+//          reached, the equilibria found so far are returned.
+// numIter: the number of iterations performed, i.e. of support cells
+//          entered, is stored here (the last one may be left before its
+//          boundary is crossed).
+// Returns the number of equilibria found.
 
-int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFreq, int LNMMax, double LambdaMin, int wobble, double threshold) {
+int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFreq, int LNMMax, double LambdaMin, int wobble, double threshold, int maxIter, int &numIter) {
   int i, // utility variables
     bestAction,  
     k, 
@@ -106,6 +113,7 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
   cvector G(N), yn1(N), ym1(M), ym2(M), ym3(M);
 
   // INITIALIZATION
+  numIter = 0;
   Eq = (cvector **)malloc(sizeof(cvector *));
   if(Eq == NULL) throw std::bad_alloc();
   Eq[0] = NULL;
@@ -193,6 +201,8 @@ int GNM(gnmgame &A, cvector &g, cvector **&Eq, int steps, double fuzz, int LNMFr
   // this outer while loop executes once for each support boundary
   // that the path crosses.
   while(1) {
+    if(numIter >= maxIter) return numEq; // iteration limit reached
+    numIter++;
     minBound = BIGFLOAT;
     k = 0; // iteration counter; when k reaches LNMFreq, run LNM
      // within a single boundary, support unchanged

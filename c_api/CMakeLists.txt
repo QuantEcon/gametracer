@@ -95,6 +95,8 @@ if(GAMETRACER_BUILD_TESTS)
     endif()
     add_test(NAME test_core COMMAND test_core)
 
+    set_tests_properties(test_c_api test_core PROPERTIES TIMEOUT 300)
+
     # On Windows the test executable must find libgametracer.dll
     if(WIN32)
         set_tests_properties(test_c_api PROPERTIES
